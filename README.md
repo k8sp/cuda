@@ -1,62 +1,43 @@
-# CoreOS + CUDA + Kubernetes + Tensorflow
+# Building and Using CUDA Drivers in Docker Containers
 
-I used to think that Ceph and Kubernetes should be installed on bare
-metal servers running Ubuntu Linux with the CUDA driver.  But
-according to a very recent
-[post](http://www.emergingstack.com/2016/01/10/Nvidia-GPU-plus-CoreOS-plus-Docker-plus-TensorFlow.html),
-it seems that CUDA driver can be built into Linux kernel modules and
-insert into a Docker image together with Tensorflow, so that when we
-run the image the CUDA kernel module is loaded by the kernel.  This
-leads to an interesting new solution -- we can run everything, from
-CUDA driver to Kubernetes and Ceph in containers.  Then we don't need
-Ubuntu at all; instead we can use CoreOS.
+## Goal
+
+In order to run an artificial intelligence based business, we need a
+general-purpose computing cluster.  A highly efficient prototype is
+described [here](https://github.com/wangkuiyi/k8s-ml), which makes use
+of Kubernetes to run jobs in Docker containers.  An ideal platform to
+run Kubernetes is CoreOS.  However, CoreOS doesn't include CUDA GPU
+driver in its kernel.  In order to use GPUs for accelerated deep
+learning, we build CUDA GPU driver as kernel modules, and load them in
+Docker images of Tensorflow, Torch and other programs that relies on
+CUDA GPU drivers.  At runtime, we load CUDA driver kernel modules from
+within Docker containers.
+
+## Solution
+
+Thanks https://github.com/emergingstack/es-dev-stack, which shows that
+above idea works.  The problem with the `es-dev-stack` tool is that
+the provided Dockerfile builds too big CUDA Docker images.  Actually,
+the disk space of an AWS EC2 g2.8xlarge instance doesn't support build
+and run such images.  Our solution is a two-phase approach:
+
+1. The `builder` image downloads necessary Linux kernel and CUDA Toolkit
+   and build CUDA drivers as kernel modules.  `builder` can run on a
+   VirtualBox VM with enough big disk spaces.  The host of the VM
+   doesn't need to have CUDA GPU.  `builder` is derived from
+   `ubuntu:14.04` image.  `builder` writes two kernel modules files:
+
+ 1. `nvidia.ko`
+ 1. `nvidia-uvm.ko`
+
+1. Some `cuda` images, each based on Tensorflow image or Torch image,
+   as well as the two kernel modules.  The Dockerfile runs command
+   like `insmod /opt/nvidia.ko && insmod /opt/nvidia-uvm.so` to load
+   kernel modules before starting programs that rely on GPU.  These
+   `cuda` images are supposed to run on computers with Docker and GPU.
 
 
-A key point with above solution that runs CUDA kernel modules within a
-container is that when we build the kernel module, we must use the
-same version of Linux kernel source code as the CoreOS.  This is
-achieved by checking the host (CoreOS) Linux kernel version in the
-[Dockerfile](https://github.com/emergingstack/es-dev-stack/blob/master/corenvidiadrivers/Dockerfile):
-
-```
-RUN git clone git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git linux
-RUN git checkout -b stable v`uname -r | sed -e "s/-.*//" | sed -e "s/\.[0]*$//"`
-```
-
-## Computing Cluster
-
-With the new idea of running everything on top of CoreOS, the first
-step is installing CoreOS.  Before that, we need to build a computer
-cluster.  I consulted Bryan Huang, my former colleague at Google IT
-team.  Bryan and his friend 吕宏利, a Google engineer, helped me
-understand the general network structure of a in-house cluster:
-
-- Every 16/24 computers are connected by cables to a switch.
-- Every some switches are connected by cables to a higher level switch.
-- A router with two ends connects the top switch with the Internet.
-
-As long as we configure computers to use HDCP and configured the
-router and all switches, those computers should be able to communicate
-to each other and the Internet once they are booted.Considering that we are going to build a computing cluster with about 100
-nodes, some recommended hardwares:
-
-- a [router with firewall](http://www.fortinet.com.cn/products/fortigate/60D.html),
-- 16 ports 100M
-  [switch](http://www.amazon.com/NETGEAR-ProSAFE-FS116NA-16-Port-Ethernet/dp/B000063UZW/ref=sr_1_11?ie=UTF8&qid=1462245958&sr=8-11&keywords=switch)
-  or 1000M switch
-  (http://www.amazon.com/NETGEAR-16-Port-Gigabit-Ethernet-Desktop/dp/B01AX8XHRQ/ref=sr_1_1?ie=UTF8&qid=1462246013&sr=8-1-spons&keywords=switch+netgear&psc=1)
-  depending on communication workload.
-
-To better understand the tree-toplogy of the network, it is important
-to understand two concepts
-[广播域和冲突域](http://202.201.18.40:8080/mas5/bbs/showBBS.jsp?id=5015&forum=259&noButton=yes).
-
-## CoreOS on VirtualBox
-
-吕宏利 reminded that even if it is true that we can boot servers from
-PXE server, the PXE server is a single-point -- if it fails, the whole
-cluster wouldn't be able to boot.  So it is more reasonable to boot
-CoreOS using PXE, and install CoreOS into disks.
+## The `Builder` Image
 
 I followed
 [this tutorial](https://gist.github.com/noonat/9fc170ea0c6ddea69c58)
@@ -127,11 +108,6 @@ and scp to my VirtualBox VM, untar there.  Then I followed the
 to remove Linux kernel source code and NVidia packages and
 docker-squash.
 
-On my VM and AWS EC2 instances, CoreOS mounts `/tmp` to a small
-in-memory filesystem which is too small.  The solution is simply `sudo
-umount /tmp` so that `/tmp` is on the big disk partition which holds
-`/`.
-
 
 ### Solution
 
@@ -169,6 +145,11 @@ into a single one, so that `docker build` creates a single commit with
 all changes.
 
 ### Pitfalls
+
+On my VM and AWS EC2 instances, CoreOS mounts `/tmp` to a small
+in-memory filesystem which is too small.  The solution is simply `sudo
+umount /tmp` so that `/tmp` is on the big disk partition which holds
+`/`.
 
 I tried using docker-squash to reduce the image size.  But it is not
 as effective as grouping all changes into a single Docker commit.
