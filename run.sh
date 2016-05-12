@@ -10,9 +10,9 @@ if [[ ! -d coreos-vagrant ]]; then
 fi
 cp coreos-vagrant/Vagrantfile .
 
-mkdir work
+mkdir cuda
 (
-    cd work
+    cd cuda
     if [[ ! -d NVIDIA-Linux-x86_64-352.39 ]]; then
 	if [[ ! -f NVIDIA-Linux-x86_64-352.39.run ]]; then
 	    if [[ ! -f cuda_7.5.18_linux.run ]]; then
