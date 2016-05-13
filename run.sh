@@ -5,11 +5,6 @@ if [[ ! -f ./`basename $0` ]]; then
     exit
 fi
 
-if [[ ! -d coreos-vagrant ]]; then
-    git clone -b sync_dir https://github.com/wangkuiyi/coreos-vagrant
-fi
-cp coreos-vagrant/Vagrantfile .
-
 mkdir cuda
 (
     cd cuda
@@ -30,6 +25,6 @@ mkdir cuda
 
 
 # # Start the virtual cluster. 
-# vagrant up
-# vagrant ssh
+vagrant up
+vagrant ssh
 
