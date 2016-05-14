@@ -23,9 +23,10 @@ mkdir cuda
     fi
 )
 
+rm -rf linux
 
 # # Start the virtual cluster.
 vagrant box update
 vagrant up
-vagrant ssh -c "docker build -t cuda /home/core/share && docker run -v /home/core/share:/opt/share cuda"
+vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged ubuntu:14.04 /bin/bash /opt/share/build.sh"
 
