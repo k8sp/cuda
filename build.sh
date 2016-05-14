@@ -1,7 +1,6 @@
 #/bin/bash
 
 echo Hello!  We are building CUDA driver for your Linux kernel ...
-ls -l /opt/share
 
 # install basic tools
 apt-get -y update
