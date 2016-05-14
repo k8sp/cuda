@@ -29,7 +29,16 @@ is to build CUDA driver in a virtual machine on my iMac.
 
 My iMac doesn't run CoreOS, so I need to run a virtual machine with
 CoreOS.  A practical and convenient way to this is to use the standard
-Vagrant CoreOS box.  Here is what I do:
+Vagrant CoreOS box.  But this box doesn't have extraordinarily large
+disk space.  So I save CUDA toolkit and Linux kernel source code on
+host disk and map host directory to the VM.
+
+Other approaches for saving disk space include:
+
+1. checking out only the most recent git commit of Linux kernel source
+   code, and
+1. avoding building a Docker image for building the CUDA driver as
+   https://github.com/emergingstack/es-dev-stack does.
 
 1. Run `git clone` to grab this repo to the host computer.
 1. Run `run.sh`, which
