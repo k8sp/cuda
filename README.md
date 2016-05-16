@@ -13,7 +13,7 @@ load them in Docker images together with Tensorflow, Torch and other
 programs that relies on CUDA GPU drivers.  At runtime, we load CUDA
 driver kernel modules from within Docker containers.
 
-## Solution
+## Build CUDA Kernel Modules
 
 https://github.com/emergingstack/es-dev-stack shows that above idea
 works.  The problem with the `es-dev-stack` tool is that it requires
@@ -40,13 +40,15 @@ Other approaches for saving disk space include:
 1. avoding building a Docker image for building the CUDA driver as
    https://github.com/emergingstack/es-dev-stack does.
 
+The building process is as follows:
+
 1. Run `git clone` to grab this repo to the host computer.
-1. Run `run.sh`, which
-  1. downloads and unpacks CUDA Toolkit into `./cuda` (on host),
+1. Run `cd cuda; ./run.sh` to
+  1. download and unpacks CUDA Toolkit into `./cuda` (on host),
   1. remove `./linux` if there has been one,
-  1. executes `vagrant box update` to retrieve the most recent version of CoreOS alpha channel box,
-  1. executes `vagrant up` to bring the CoreOS VM up and mounts the current host directory to VM's `/home/core/share` via NFS,
-  1. executes `vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged ubuntu:14.04 /bin/bash /opt/share/build.sh"` to build CUDA kernel modules.
+  1. execute `vagrant box update` to retrieve the most recent version of CoreOS alpha channel box,
+  1. execute `vagrant up` to bring the CoreOS VM up and mounts the current host directory to VM's `/home/core/share` via NFS, and
+  1. execute `vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share gcc:4.9 /bin/bash /opt/share/build-cuda-driver.sh"` to build CUDA kernel modules.
 
 Note that as specified in Vagrantfile, we mount `./` of the host to
 `/home/core/share` on the VM at via NFS.  So that any change to the
@@ -56,13 +58,21 @@ Also, as specified in the above `docker run -v` command, we map
 `/home/core/share` on the VM to `/opt/share` in the Docker container.
 
 Please be aware that the Docker container gets the Linux kernel
-version using `uname` in `build.sh`, and grabs Linux kernel source
-code that matches the CoreOS kernel version running in the VM.  If you
-want to use another channel of CoreOS, say stable or beta, please edit
-Vagrantfile to use the corresponding Vagrant CoreOS box.
+version using `uname` in `build-cuda-driver.sh`, and grabs Linux
+kernel source code that matches the CoreOS kernel version running in
+the VM.  If you want to use another channel of CoreOS, say stable or
+beta, please edit Vagrantfile to use the corresponding Vagrant CoreOS
+box.
 
 The checked out Linux kernel source code is put in `/opt/share/linux`.
 You will notice `./linux` on the host.
+
+## Build CUDA Applications
+
+After `./run.sh` builds the CUDA driver as kernel modules, we can run
+`./run.sh` again to build an example CUDA application
+`./example/example.cu`.  The mechanism for this building is similar to
+how to build the CUDA driver, as described in `build-cuda-app.sh`.
 
 ## Pitfalls
 
