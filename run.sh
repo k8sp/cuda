@@ -6,27 +6,53 @@ if [[ ! -f ./`basename $0` ]]; then
 fi
 
 mkdir cuda
-(
-    cd cuda
-    if [[ ! -d NVIDIA-Linux-x86_64-352.39 ]]; then
-	if [[ ! -f NVIDIA-Linux-x86_64-352.39.run ]]; then
-	    if [[ ! -f cuda_7.5.18_linux.run ]]; then
-		wget http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run
+
+if [[ -f cuda/nvidia.ko &&  -f cuda/nvidia-uvm.ko ]]; then
+    echo "CUDA kernel modules already built.  Creating an application Docker image ..."
+    ACTION=use
+    (
+	cd cuda
+	if [[ ! -d cuda-7.5 ]]; then
+	    if [[ ! -f cuda-linux64-rel-7.5.18-19867135.run ]]; then
+		if [[ ! -f cuda_7.5.18_linux.run ]]; then
+		    wget http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run
+		fi
+
+		chmod +x cuda_7.5.18_linux.run
+		./cuda_7.5.18_linux.run -extract=`pwd`
 	    fi
 
-	    chmod +x cuda_7.5.18_linux.run
-	    ./cuda_7.5.18_linux.run -extract=`pwd`
+	    chmod +x cuda-linux64-rel-7.5.18-19867135.run
+	    ./cuda-linux64-rel-7.5.18-19867135.run -noprompt -prefix=`pwd`/cuda-7.5
 	fi
+    )
+else
+    echo "Building CUDA kernel modules ..."
+    ACTION=build
+    (
+	cd cuda
+	if [[ ! -d NVIDIA-Linux-x86_64-352.39 ]]; then
+	    if [[ ! -f NVIDIA-Linux-x86_64-352.39.run ]]; then
+		if [[ ! -f cuda_7.5.18_linux.run ]]; then
+		    wget http://developer.download.nvidia.com/compute/cuda/7.5/Prod/local_installers/cuda_7.5.18_linux.run
+		fi
 
-	chmod +x ./NVIDIA-Linux-x86_64-352.39.run
-	./NVIDIA-Linux-x86_64-352.39.run -a -x --ui=none
-    fi
-)
+		chmod +x cuda_7.5.18_linux.run
+		./cuda_7.5.18_linux.run -extract=`pwd`
+	    fi
 
-rm -rf linux
+	    chmod +x ./NVIDIA-Linux-x86_64-352.39.run
+	    ./NVIDIA-Linux-x86_64-352.39.run -a -x --ui=none
+	fi
+    )
+    rm -rf linux # Re-grab Linux kernel source code anyway.
+fi
 
-# # Start the virtual cluster.
 vagrant box update
 vagrant up
-vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged ubuntu:14.04 /bin/bash /opt/share/build.sh"
 
+if [[ $ACTION == "use" ]]; then
+    echo vagrant ssh -c "docker build -t cxwangyi/cudademo /home/core/share && docker login -u=cxwangyi && docker push"
+else 
+    vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged ubuntu:14.04 /bin/bash /opt/share/build.sh"
+fi
