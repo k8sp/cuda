@@ -2,7 +2,10 @@
 
 echo Hello!  We are building CUDA driver for your Linux kernel ...
 
-source ./install-gcc49.sh
+if [[ `gcc --version | head -n 1` != "gcc (GCC) 4.9.3" ]]; then
+    echo GCC 4.9 is required for building CUDA driver for CoreOS;
+    exit;
+fi
 
 # clone Linux kernel source code and prepare for kernel module building.
 cd /opt/share

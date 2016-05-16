@@ -8,7 +8,7 @@ fi
 mkdir cuda
 
 if [[ -f cuda/nvidia.ko &&  -f cuda/nvidia-uvm.ko ]]; then
-    echo "CUDA kernel modules already built.  Creating an application Docker image ..."
+    echo "CUDA kernel modules were built already.  Building a CUDA sample app ..."
     ACTION=use
     (
 	cd cuda
@@ -52,7 +52,7 @@ vagrant box update
 vagrant up
 
 if [[ $ACTION == "use" ]]; then
-    echo vagrant ssh -c "docker build -t cxwangyi/cudademo /home/core/share && docker login -u=cxwangyi && docker push"
+    vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged gcc:4.9 /bin/bash /opt/share/build-cuda-app.sh"
 else 
-    vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged ubuntu:14.04 /bin/bash /opt/share/build.sh"
+    vagrant ssh -c "docker run --rm -v /home/core/share:/opt/share --privileged gcc:4.9 /bin/bash /opt/share/build-cuda-driver.sh"
 fi
