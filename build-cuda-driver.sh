@@ -7,6 +7,10 @@ if [[ `gcc --version | head -n 1` != "gcc (GCC) 4.9.3" ]]; then
     exit;
 fi
 
+# Install the essential tools
+apt-get update
+apt-get install -y bc module-init-tools
+
 # clone Linux kernel source code and prepare for kernel module building.
 cd /opt/share
 git clone -b v`uname -r | sed -e "s/-.*//" | sed -e "s/\.[0]*$//"` --depth 1 git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git linux
